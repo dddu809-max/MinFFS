@@ -54,7 +54,7 @@ jobs:
 
       # 打包可执行文件并上传到 artifact
       - name: Package and upload
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: MinFFS
           path: 'MinFFS.exe'
