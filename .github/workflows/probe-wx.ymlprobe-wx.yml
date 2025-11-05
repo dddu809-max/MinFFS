@@ -1,0 +1,61 @@
+name: Probe wxWidgets layout
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: windows-2025
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install MinGW and 7zip
+        run: |
+          choco install -y mingw
+          choco install -y 7zip
+
+      - name: Download and inspect wxWidgets 3.0.2
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          Write-Host "=== STEP 1: download wxWidgets zip ==="
+          curl -L "https://sourceforge.net/projects/wxwindows/files/3.0.2/wxWidgets-3.0.2.zip/download" -o wxWidgets-3.0.2.zip
+
+          $wxTmp = "C:\wx-src"
+          if (Test-Path $wxTmp) {
+            Remove-Item $wxTmp -Recurse -Force
+          }
+          New-Item -ItemType Directory -Path $wxTmp | Out-Null
+
+          Write-Host "=== STEP 2: expand archive to $wxTmp ==="
+          Expand-Archive -Path "wxWidgets-3.0.2.zip" -DestinationPath $wxTmp -Force
+
+          Write-Host "=== STEP 3: top-level under $wxTmp ==="
+          Get-ChildItem $wxTmp
+
+          Write-Host "=== STEP 4: first 30 directories (recursive) ==="
+          Get-ChildItem $wxTmp -Recurse -Directory | Select-Object -First 30 FullName
+
+          Write-Host "=== STEP 5: find makefile.gcc ==="
+          $mk = Get-ChildItem $wxTmp -Recurse -Filter "makefile.gcc" | Select-Object -First 10
+          if (-not $mk) {
+            Write-Host "NO makefile.gcc found under $wxTmp"
+          } else {
+            $mk | ForEach-Object {
+              Write-Host "found makefile.gcc at: $($_.FullName)"
+            }
+          }
+
+          Write-Host "=== STEP 6: environment info (before running any make) ==="
+          Write-Host "PATH  = $env:PATH"
+          Write-Host "SHELL = $env:SHELL"
+          Write-Host "COMSPEC = $env:COMSPEC"
+
+          Write-Host "=== STEP 7: test a dummy mingw32-make call (no build) ==="
+          $env:PATH = "C:\ProgramData\mingw64\mingw64\bin;$env:PATH"
+          mingw32-make --version
+
+          Write-Host "=== DONE: probe complete, NOT building anything ==="
